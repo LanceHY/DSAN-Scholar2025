@@ -1,0 +1,75 @@
+---
+title: "Aid Worker Security"
+format:
+  html:
+    theme: flatly
+    page-layout: full
+    css: styles.css
+    code-fold: true
+    toc: false
+---
+
+
+```{python}
+#| echo: false
+#| results: 'hide'
+import pandas as pd 
+import folium
+from folium.plugins import MarkerCluster
+from datetime import datetime
+from IPython.display import display, HTML
+
+df = pd.read_csv("security_cleaned.csv")
+
+latest_year = datetime.now().year
+major_attacks_2025 = df[df["Year"] == latest_year]["Incident ID"].nunique()
+major_attacks = df["Incident ID"].nunique()
+
+warning_sign = "\u26A0\uFE0F"
+
+display(HTML(f"""
+<hr style='border-top: 1px solid #ccc; margin-top: 1rem;' />
+<div style='text-align: center; margin: 1.5rem 0;'>
+  <h3 style='color:#c0392b; font-size: 1.7rem;'>{warning_sign} Major Attacks So Far in <strong>{latest_year}</strong></h3>
+  <div style='font-size: 3.5rem; font-weight: bold; color:#c0392b;'>{major_attacks_2025}</div>
+  <div style='color:#c0392b; font-size: 1.4rem; margin-top: 0.5rem;'>
+    Total unique recorded attacks in the dataset: <strong>{major_attacks}</strong>
+  </div>
+</div>
+"""))
+```
+
+<div class="centered-section">
+  <h2 style="color: #b22222; font-weight: 700;">
+    Mapping the Danger:<br>
+    <span style="font-weight: 500; font-size: 1.2rem;">
+      When, Where, and How Aid Agencies Face Violence and Dangers
+    </span>
+  </h2>
+</div>
+
+
+```{python}
+#| echo: false
+#| results: 'hide'
+df_map = df.dropna(subset=["Latitude", "Longitude"])
+m = folium.Map(location=[10, 0], zoom_start=2, tiles="cartodbpositron")
+marker_cluster = MarkerCluster().add_to(m)
+
+for _, row in df_map.iterrows():
+    popup_text = f"""
+    <b>Country:</b> {row['Country']}<br>
+    <b>Date:</b> {int(row['Year'])}-{int(row['Month']) if not pd.isna(row['Month']) else '??'}-{int(row['Day']) if not pd.isna(row['Day']) else '??'}<br>
+    <b>Location:</b> {row['Location']}<br>
+    <b>Means of Attack:</b> {row['Means of attack']}<br>
+    <b>Total Affected:</b> {row['Total affected']}<br>
+    <b>Killed:</b> {row['Total killed']} | <b>Wounded:</b> {row['Total wounded']} | <b>Kidnapped:</b> {row['Total kidnapped']}
+    """
+    folium.Marker(
+        location=[row['Latitude'], row['Longitude']],
+        popup=popup_text,
+        tooltip=row['Country']
+    ).add_to(marker_cluster)
+
+m
+```

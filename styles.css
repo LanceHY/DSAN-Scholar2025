@@ -1,0 +1,93 @@
+body {
+  background-color: #e3dac9;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
+  color: #2b2b2b;
+  margin: 0;
+}
+
+.centered-title {
+  text-align: center;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.subtext {
+  text-align: center;
+  font-size: 1.1rem;
+  color: #6e6e6e;
+  margin-bottom: 2rem;
+}
+
+h1, h2, h3 {
+  color: #c62828;
+  font-weight: 600;
+}
+
+body.page-main h1,
+body.page-main h2 {
+  text-align: center;
+}
+
+pre, code {
+  background-color: #f8f8f8;
+  color: #333;
+  font-size: 15px;
+  border-radius: 5px;
+  padding: 0.4em 0.8em;
+}
+
+
+.panel {
+  background-color: #f9f9f9;
+  border-left: 5px solid #e53935;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  border-radius: 6px;
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #c0392b;
+  padding: 0.8rem 2rem;
+  height: 120px; 
+  overflow: hidden;
+  position: relative;
+  z-index: 1000;
+}
+
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navbar .navbar-title {
+  font-size: 2rem;  
+  font-weight: bold;
+  color: white;
+}
+
+.navbar .nav-links a {
+  font-size: 2rem; 
+  color: white;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.navbar .nav-links a:hover {
+  text-decoration: underline;
+}
+
+.navbar .gt-logo {
+  max-height: 48px;        
+  width: auto;             
+  margin-right: 12px;
+  object-fit: contain;     
+  display: inline-block;
+  vertical-align: middle;
+}

@@ -1,0 +1,219 @@
+---
+title: "Data Cleaning & Exploratory Analysis"
+format:
+  html:
+    toc: true
+    page-layout: full
+    code-fold: true
+    css: styles.css
+    self-contained: true
+    embed-resources: true
+warning: False
+---
+
+This page is a reference of data-processing and some not used but meaningful vizs provided with code. 
+
+## Cleaning 
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import missingno as msno
+
+df = pd.read_csv("security_incidents.csv")
+df.head()
+```
+
+
+```{python}
+df.info()
+```
+
+```{python}
+df.describe(include='all').T
+```
+
+
+```{python}
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+plt.rcParams['axes.facecolor'] = '#e3dac9'      
+plt.rcParams['figure.facecolor'] = '#e3dac9'   
+plt.rcParams['savefig.facecolor'] = '#e3dac9' 
+
+msno.matrix(df)
+plt.title("Missing Data Matrix")
+plt.show()
+```
+
+```{python}
+msno.heatmap(df)
+plt.title("Missing Value Correlation")
+plt.show()
+```
+
+
+```{python}
+df = df.dropna(subset=['Latitude', 'Longitude'])
+
+threshold = 0.8
+missing_frac = df.isnull().mean()
+cols_to_drop = missing_frac[missing_frac > threshold].index.tolist()
+df = df.drop(columns=cols_to_drop)
+
+df['Month'] = df['Month'].fillna(0).astype(int)
+df['Day'] = df['Day'].fillna(0).astype(int)
+
+df['Means of attack'] = df['Means of attack'].fillna("Unknown")
+df['Region'] = df['Region'].fillna("Unknown")
+
+df['Total casualties'] = df[['Total killed', 'Total wounded', 'Total kidnapped']].sum(axis=1)
+
+df.to_csv("security_cleaned.csv", index=False)
+df.head()
+```
+
+
+```{python}
+df.shape, df.columns.tolist()
+```
+
+## EDA
+```{python}
+sns.countplot(data=df, x='Year')
+plt.xticks(rotation=90)
+plt.title("Number of Incidents per Year")
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+msno.matrix(df)
+plt.title("Missing After Cleaning")
+plt.show()
+```
+
+```{python}
+sns.histplot(df['Total casualties'], bins=30, kde=True)
+plt.title("Distribution of Total Casualties")
+plt.show()
+```
+
+
+```{python}
+org_cols = ['UN', 'INGO', 'ICRC', 'NRCS and IFRC', 'NNGO']
+df_org = df[org_cols].sum().sort_values(ascending=False).reset_index()
+df_org.columns = ['Organization', 'Total Victims']
+
+plt.figure(figsize=(8, 6))
+sns.barplot(data=df_org, x='Total Victims', y='Organization', palette='flare')
+plt.title("Total Affected by Organization Type")
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+plt.figure(figsize=(10, 6))
+sns.countplot(data=df, y='Means of attack', order=df['Means of attack'].value_counts().index, palette='magma')
+plt.title("Most Frequent Means of Attack")
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+sns.histplot(data=df, x='Month', bins=12, discrete=True, color='steelblue')
+plt.title("Distribution of Attacks by Month")
+plt.xticks(range(0, 13))
+plt.tight_layout()
+plt.show()
+```
+
+
+
+<!-- ```{vega-lite}
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {"url": "security_cleaned.csv"},
+  "mark": "line",
+  "encoding": {
+    "x": {"field": "Year", "type": "temporal"},
+    "y": {"aggregate": "sum", "field": "Total casualties", "type": "quantitative"},
+    "tooltip": [
+      {"field": "Year", "type": "temporal"},
+      {"field": "Total casualties", "aggregate": "sum"}
+    ]
+  },
+  "title": "Total Casualties per Year (Interactive)"
+}
+``` -->
+
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(readr)
+
+df <- read_csv("security_cleaned.csv")
+
+df %>% 
+  filter(!is.na(`Means of attack`)) %>%
+  group_by(Year, `Means of attack`) %>% 
+  summarise(n = n(), .groups = "drop") %>%
+  ggplot(aes(x = reorder(`Means of attack`, n), y = n)) +
+  geom_col(fill = "tomato") +
+  facet_wrap(~ Year, scales = "free_y") +
+  coord_flip() +
+  labs(title = "Attack Types by Year", x = "Attack Type", y = "Incident Count") +
+  theme_minimal()
+```
+
+
+```{python}
+org_avg = df.melt(id_vars=['Total casualties'], value_vars=org_cols)
+org_avg = org_avg[org_avg['value'] == 1]
+rate_df = org_avg.groupby('variable')['Total casualties'].mean().sort_values(ascending=False).reset_index()
+rate_df.columns = ['Organization', 'Avg Casualties per Incident']
+
+plt.figure(figsize=(8, 5))
+sns.barplot(data=rate_df, x='Avg Casualties per Incident', y='Organization', palette='Reds_r')
+plt.title("Average Casualties per Incident by Org Type")
+plt.tight_layout()
+plt.show()
+```
+```{python}
+attack_risk = df.groupby('Means of attack')['Total casualties'].mean().sort_values(ascending=False).reset_index()
+plt.figure(figsize=(10, 6))
+colors = sns.color_palette("Reds", len(attack_risk))
+sns.barplot(
+    data=attack_risk,
+    x='Total casualties',
+    y='Means of attack',
+    palette=colors[::-1] 
+)
+plt.title("Avg Casualties per Attack Method")
+plt.xlabel("Average Casualties")
+plt.ylabel("Attack Method")
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+region_rate = df.groupby('Region')['Total casualties'].sum() / df.groupby('Region')['Incident ID'].count()
+region_rate = region_rate.sort_values(ascending=False).reset_index()
+region_rate.columns = ['Region', 'Avg Casualties per Incident']
+
+plt.figure(figsize=(10, 6))
+sns.barplot(data=region_rate, x='Avg Casualties per Incident', y='Region', palette='Reds_r')
+plt.title("Region-wise Casualty Severity")
+plt.tight_layout()
+plt.show()
+```
+
+## References
+- Georgetown logo is from [Georgetown University Wikipedia svg Logo](https://en.m.wikipedia.org/wiki/File:Georgetown_University_seal.svg)
+- Used some AI tools help me construct the outline of the report after I finished visulizations. 
+- Used AI to check some paragraphs grammar and improve my writing techs. Also asked it to give some powerful titles for charts. 
+
+---

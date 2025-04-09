@@ -1,0 +1,356 @@
+---
+title: "Aid Agency Security Analysis Report"
+author: Lance Yi
+format:
+  html:
+    toc: true
+    theme: flatly
+    page-layout: full
+    code-fold: true
+    embed-resources: true
+    self-contained: true
+    css: styles.css
+warning: False
+---
+
+```{python}
+#| echo: false
+#| results: 'hide'
+import pandas as pd
+import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import seaborn as sns
+import folium
+from folium.plugins import MarkerCluster
+from datetime import datetime
+from IPython.display import display, HTML
+
+df = pd.read_csv("security_cleaned.csv")
+plt.rcParams['axes.facecolor'] = '#e3dac9'      # plot area
+plt.rcParams['figure.facecolor'] = '#e3dac9'    # outer figure
+plt.rcParams['savefig.facecolor'] = '#e3dac9'   # saved images
+```
+
+
+## Introduction
+
+In regions suffered by political instability, geoplolitical conflict, and humanitarian crises, aid institutions and their agencies play a crticial role in delivering human-life-saving and shelter-offering projects. However, the humanitarian pioneers often face life-threatening risks themselves. Those risks include different events from targeted attacks to collateral damage amid broader hostilities.
+
+This report draws on a comprehensive analysis base on an event-level dataset. The dataset includes thoudsands of incidents that involves aid personnel. The events are compiled across multiple decaseds and global regions. Unlike individual-level or location-based datasets, this record is structured by discrete events, each capturing the time, place, nature, and outcome of a specific attack. 
+
+Our investigation seeks to uncover the structural and contextual dimensions of these attacks:
+
+- **Geographical Patterns**: Which countries and regions exhibit consistently high rates of violent incidents?
+
+- **Temporal Dynamics**: How have these threats evolved over time?
+
+- **Operational Vulnerabilities**: Do certain aid organizations, affiliations, or vehicle markings correlate with greater danger?
+
+- **Tactical Profiles**: What forms of violence are most prevalent and severe?
+
+- **Strategic Recommendations**: How can agencies better protect personnel and plan missions in high-risk environments?
+
+This report uses skills in **data visulization**, **geographic storytelling**, and **statistical approach** to offer data insights for stakeholders in order to help them with a data-driven decision-making method. Using such method could help them to have an alternative way to deal with the ongoing challenges.
+
+---
+
+## Heatmap of Attack Concentrations Across Conflict Zones 
+```{python}
+#| echo: false
+#| results: 'hide'
+from folium.plugins import HeatMap
+df_heat = df[['Latitude', 'Longitude', 'Total casualties']].dropna()
+
+m = folium.Map(location=[df_heat['Latitude'].median(), df_heat['Longitude'].median()],
+               zoom_start=3, tiles='CartoDB positron')
+
+HeatMap(data=df_heat[['Latitude', 'Longitude', 'Total casualties']],
+        radius=9,
+        blur=12,
+        max_zoom=6).add_to(m)
+
+m
+```
+
+
+
+### Hazard Zones: Mapping the Deadliest Areas for Aid Workers
+
+The heatmap reveals concentrated regions of risk for humanitarian personnel and our beloved aid agencies. While violence against aid workers spans globally, certain zones emerge as particularly hazardous. Below, we highlight three of the most affected regions.
+
+#### Africa
+
+The map clearly shows that Sub-Saharan Africa — particularly the corridor between Sudan, South Sudan, Uganda, and the Democratic Republic of Congo — are identified as the most densely affected zone. Almost half of Africa is covered by conflicts and attacks.
+
+The area around Juba, the capital of South Sudan, solely takes over 60 separate incidents, which in other words it counts up to nearly 10% of all casualty events in the broader Sudan-Uganda region. This hotspot suggests a extremly high level of operational danger even in a rather better administrated political or economic centers, which were traditionally considered relatively secure than other general regions.
+
+#### Central Asia
+
+The most significant hotspot on the map is Afghanistan, Central Asia. The heatmap indicates widespread danger and risks across the entire nation of Afghanistan. The data and map show over 690 incidents, which indicates that Afghanistan is one of the most volatile operational environments for aid agencies.
+
+Among all locations, Kabul is marked as one of the most dangerous regions for aid agencies, with more than 60 recorded events. This record suggests that even urban centers with an international presence are not a shelter or a paradise that is immune to targeted attacks or collateral damage.
+
+
+#### Middle-East
+
+The Middle East remains a region of entrenched geopolitical conflict. The map proofs it with the second largest and warmest spot. Clusters of violent events are concentrated in and around the Gaza Strip, Israel, Lebanon, and Syria, together they are accounted for over 500 recorded incidents in a relatively smaller region compared to South Africa or genral central Asia areas.
+
+The Israel-Gaza-Lebanon corridor alone accounts for nearly 300 events, making it one of the most consistently hostile zones for humanitarian missions. In particular, the Gaza Strip, with 130 reported incidents, emerges as the most dangerous compact area as shown in the map.
+
+---
+
+## Top Countries by Casualties
+```{python}
+#| echo: false
+#| results: 'hide'
+top10 = df.groupby('Country')['Total casualties'].sum().nlargest(10).reset_index()
+
+plt.figure(figsize=(9, 6))
+
+sns.barplot(
+    data=top10,
+    y='Country',
+    x='Total casualties',
+    palette='Reds_r'
+)
+plt.title("Top 10 Countries by Total Casualties (All Years)")
+plt.xlabel("Total Casualties")
+plt.ylabel("Country")
+plt.tight_layout()
+plt.show()
+```
+
+This chart coherent with our heatmap showing Afghanistan and South Sudan areas are most dangerous regions for aid agencies. 
+
+## Temporal Trends
+
+### Yearly Incident Trends
+```{python}
+#| echo: false
+#| results: 'hide'
+incidents = df.groupby('Year')['Incident ID'].count().reset_index()
+incidents_2025 = incidents.loc[incidents['Year'] == 2025, 'Incident ID'].values[0]
+
+plt.figure(figsize=(9, 6))
+
+sns.lineplot(data=incidents, x='Year', y='Incident ID', marker='o')
+plt.axhline(y=incidents_2025, color='crimson', linestyle='--', linewidth=2, label='2025 Incident Count')
+
+
+plt.title("Total Security Incidents per Year")
+plt.ylabel("Number of Incidents")
+plt.tight_layout()
+plt.show()
+```
+
+This line chart shows the trend of aid worker attacks since 1997. Following 2010, the frequency of incidents climbed steadily, which refelcts a escalating global instability. It is also worthy notice that aid worker casualties peaked in 2013. Such increase was due to the increasing conflicts in South Sudan and Syria. The decline afterward reflects improved security protocols, operational withdrawals, and local negotiations by aid agencies. 
+
+However, the trend incrased after year of 2017 which is due to the rising conflicts in Democratic Republic of the Congo (DRC) and sub-Saharan Africa. And the trend of incidents kept increasing til 2024.
+
+Another alert we can obtain from the chart is that by now in year of 2025, the incidents have already surpassed the annual incidents of any year before 2002. Such fact is warning us the gobal situation is getting less stable, and we need more regulation on the specific regions and more supports for our humanitarian personnels. 
+
+### Victim Type Breakdown
+```{python}
+#| echo: false
+#| results: 'hide'
+victims = df.groupby('Year')[['Total killed', 'Total wounded', 'Total kidnapped']].sum().reset_index()
+
+plt.figure(figsize=(9, 6))
+
+sns.lineplot(data=victims, x='Year', y='Total killed', label='Killed', marker='o', color='darkred')
+sns.lineplot(data=victims, x='Year', y='Total wounded', label='Wounded', marker='o', color='orange')
+sns.lineplot(data=victims, x='Year', y='Total kidnapped', label='Kidnapped', marker='o', color='gray')
+
+
+plt.title("Trends in Victim Outcomes Over Time", fontsize=14, fontweight='bold')
+plt.ylabel("Number of Victims")
+plt.xlabel("Year")
+plt.legend(title="Victim Type", loc='upper right')
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.show()
+```
+
+This line chart tells us that fatalities remain high year-over-year, but kidnappings show some level of volatility. This volatility could possiblely be caused political motives or regional instability. As for the future support we should focus more on life protection for aid agencies. 
+
+---
+
+## Who and How? Attackers and Methods
+
+### Who Commits the Attacks?
+```{python}
+#| echo: false
+#| results: 'hide'
+actors = df['Actor type'].value_counts().reset_index()
+actors.columns = ['Actor Type', 'Count']
+
+plt.rcParams['axes.facecolor'] = '#e3dac9'
+plt.rcParams['figure.facecolor'] = '#e3dac9'
+plt.rcParams['savefig.facecolor'] = '#e3dac9'
+
+plt.figure(figsize=(9, 6))  
+
+sns.barplot(data=actors, y='Actor Type', x='Count', palette='Blues_r')
+
+plt.title("Top Actor Types Involved in Incidents", fontsize=15)
+plt.xlabel("Number of Incidents", fontsize=12)
+plt.ylabel("Actor Type", fontsize=12)
+
+plt.rcParams['axes.facecolor'] = '#e3dac9'
+plt.rcParams['figure.facecolor'] = '#e3dac9'
+plt.rcParams['savefig.facecolor'] = '#e3dac9'
+
+plt.tight_layout()
+plt.show()
+```
+
+It is astonishing that over 2000 incidents are attributed to unknown actors. This shows the lack of critical information intelligence in high-risk regions. This lack of attribution underscores the operational uncertainty faced by aid agencies on the ground. 
+
+Non-state armed groups, particularly national and unaffiliated factions are accounted for the next largest share. These actors often operate outside state control and are concentrated in conflict-heavy areas like Afghanistan, Sudan, and Gaza. 
+
+The dominance of unknowns again highlights the need for enhanced local intelligence, improved field documentation, and stronger coordination with community members to get the identity of possible actors and take actions before attack happens.
+
+### How Do They Attack?
+```{python}
+#| echo: false
+#| results: 'hide'
+attack_counts = df['Means of attack'].value_counts().reset_index()
+attack_counts.columns = ['Means of attack', 'Count']
+attack_counts = attack_counts.sort_values(by='Count', ascending=True)
+
+plt.figure(figsize=(9, 6))
+sns.barplot(data=attack_counts, y='Means of attack', x='Count', palette="Reds_r")
+plt.title("Top Attack Methods")
+plt.xlabel("Number of Incidents")
+plt.ylabel("Means of Attack")
+plt.tight_layout()
+plt.show()
+```
+
+The bar plot finds out the most common methods of attacks are shooting, kidnapping, and bodily assault. Shooting alone takes more than 1200 incidents. These attacks are ont only frequent but also life-threatening to frontliners. 
+
+Notably, kidnapping emerges as a high-frequency tactic, especially in politically unstable zones. Such trend reflects the growing use of aid workers as leverage in regional conflicts. Bodily assaults can harm both physically and mentally to the aid agencies, that could lead to PTSD after they withdraw from the high-risk fields. 
+
+Agencies must prioritize protection protocols for transit routes and urban deployments. Investments in early warning systems and conflict-sensitive scheduling may significantly reduce exposure to shooting and abduction risks. It is also valuable for institutions to assign periodical health check to make sure the frontliners are in good condition and are capable of wokring in high pressure. 
+
+
+### Where Do Attacks Occur?
+```{python}
+#| echo: false
+#| results: 'hide'
+top_regions = df['Region'].value_counts().nlargest(15).index
+filtered_df = df[df['Region'].isin(top_regions)]
+
+heatmap_data = filtered_df.pivot_table(
+    index='Region',
+    columns='Means of attack',
+    values='Incident ID',
+    aggfunc='count',
+    fill_value=0
+)
+
+plt.figure(figsize=(9, 6))
+sns.heatmap(heatmap_data, annot=True, fmt='d', cmap='YlOrBr')
+plt.title("Top 15 Regions vs. Means of Attack")
+plt.xlabel("Means of Attack")
+plt.ylabel("Region")
+plt.tight_layout()
+plt.show()
+```
+
+This heatmap shows different regions facing various types of attacks.
+
+- Gaza Strip, Idlib, and Aleppo are facing challenges mainly are aerial bombardment and shooting, which is consistent with the ongoing conflict zones in the Middle East.
+
+- In Jonglei and Unity, bodily assault and shooting are more often. This suggests a high interpersonal violence and rebel encounters in mentioned regions.
+
+- Central Equatoria has high bodily assault rate.
+
+- Besides above regions, there is a huge amount of unknown events happened in unknown regions, which again emphasizes the lack of our intellegence. 
+
+
+---
+
+## Organizational Risk Profiles
+
+### Casualties per Organization
+```{python}
+#| echo: false
+#| results: 'hide'
+org_cols = ['UN', 'INGO', 'ICRC', 'NRCS and IFRC', 'NNGO']
+df_org = df[org_cols].copy()
+df_org['Total casualties'] = df['Total casualties']
+
+# Melt to long format
+df_melted = df_org.melt(id_vars='Total casualties', var_name='Org Type', value_name='Involved')
+df_melted = df_melted[df_melted['Involved'] == 1]
+
+# Calculate average and total casualties per organization
+avg_casualties = df_melted.groupby('Org Type')['Total casualties'].mean().reset_index()
+total_casualties = df_melted.groupby('Org Type')['Total casualties'].sum().reset_index()
+
+# Set up side-by-side subplots
+plt.figure(figsize=(9, 5))
+plt.subplot(1, 2, 1)
+sns.barplot(data=avg_casualties, x='Org Type', y='Total casualties', palette='Blues')
+plt.title("Average Casualties per Incident")
+plt.ylabel("Average Casualties")
+plt.xlabel("Organization")
+
+plt.subplot(1, 2, 2)
+sns.barplot(data=total_casualties, x='Org Type', y='Total casualties', palette='Reds')
+plt.title("Total Casualties per Organization")
+plt.ylabel("Total Casualties")
+plt.xlabel("Organization")
+
+plt.tight_layout()
+plt.show()
+```
+
+It is hard to tell the casualty rate for different orgnizations by merely one chart. Here we use a side by side chart to offer better insights. 
+
+From the chart we can see the ICRC has the highest average casualities per incident while INGO has the highest total casualties. 
+
+Combining both chart, it seems UN ranked middle in both average and total casualties. Therefore it might be a good idea for members from ICRC or INGO to make up as UN members to imrpove their survival rate. 
+
+### Nationals vs Internationals
+```{python}
+#| echo: false
+#| results: 'hide'
+nat_int = pd.DataFrame({
+    'Worker Type': ['National', 'International'],
+    'Killed': [
+        df['Nationals killed'].sum(),
+        df['Internationals killed'].sum()
+    ]
+})
+
+plt.figure(figsize=(9, 6))
+sns.barplot(data=nat_int, x='Worker Type', y='Killed', palette='coolwarm')
+plt.title("National vs International Aid Workers Killed")
+plt.tight_layout()
+plt.show()
+```
+
+This bar chart shows us a distinct difference of the possibility for local or international workers being killed. The dead national workers are more than 2500, while the dead international workers are below 500. 
+
+Both national and international aid agencies are respected, but it might be a good idea to have local aid agencies dressed up as international workers or mix them up for groups. Using such a stratergy could potentially improve the survival rate for local aid agencies. 
+
+---
+
+## Limitations
+
+- Data includes only successful attacks which makes the base rate unknown and not all risks can be measured.
+- Too many fields are listed "Unknown", especially for attacker type and motivations, even some attacked regions are listed "Unknown" as well.
+
+---
+
+## Conclusions & Recommendations
+
+Conflict zones like South Sudan, Afghanistan, and the Gaza–Israel corridor dominate global aid worker casualties. Actors are not randomly attacking random regions. They choose their target within specific areas, often near urban centers like Juba or Kabul which shows that even high-profile areas are not perfect shelters. Shooting still remains the biggest issue among different attacks to aid agencies. 
+
+ICRC-related missions show fewer casualties, while INGOs face greater variance and risk. National aid workers are consistently more vulnerable than internationals.
+
+Orgnizations should invest more in intellegence, route safety, and prioritize the protection for local agencies, especially in hotspots seen in the heatmap. 
+
+**We should definitly act up to support our beloved humanitarian pioneers and make our own efforts for a more peaceful and beautiful world!**
